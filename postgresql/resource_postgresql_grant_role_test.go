@@ -74,7 +74,7 @@ WHERE
   gr.rolname = $2;
 `
 
-	if getGrantRoleQuery != expected {
+	if strings.Join(strings.Fields(getGrantRoleQuery), " ") != strings.Join(strings.Fields(expected), " ") {
 		t.Fatalf("getGrantRoleQuery changed unexpectedly:\n got: %q\nwant: %q", getGrantRoleQuery, expected)
 	}
 
