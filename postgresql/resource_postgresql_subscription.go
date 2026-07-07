@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"strings"
@@ -124,15 +125,16 @@ func resourcePostgreSQLSubscriptionReadImpl(db *DBConnection, d *schema.Resource
 
 	var subExists bool
 	queryExists := "SELECT TRUE FROM pg_catalog.pg_stat_subscription WHERE subname = $1"
-	err = txn.QueryRow(queryExists, pqQuoteLiteral(subName)).Scan(&subExists)
-	if err != nil {
-		return fmt.Errorf("failed to check subscription: %w", err)
-	}
-
-	if !subExists {
+	// A missing subscription yields no row, so QueryRow returns ErrNoRows.
+	// Treat that as "gone" and clear the ID (this used to be handled by the
+	// now-removed Exists callback); anything else is a real error.
+	switch err = txn.QueryRow(queryExists, pqQuoteLiteral(subName)).Scan(&subExists); {
+	case err == sql.ErrNoRows:
 		log.Printf("[WARN] PostgreSQL Subscription (%s) not found for database %s", subName, databaseName)
 		d.SetId("")
 		return nil
+	case err != nil:
+		return fmt.Errorf("failed to check subscription: %w", err)
 	}
 
 	// pg_subscription requires superuser permissions, it is okay to fail here
