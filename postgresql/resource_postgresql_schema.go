@@ -286,6 +286,11 @@ func resourcePostgreSQLSchemaReadImpl(db *DBConnection, d *schema.ResourceData) 
 
 	txn, err := startTransaction(db.client, database)
 	if err != nil {
+		if isDatabaseDoesNotExistError(err) {
+			log.Printf("[WARN] PostgreSQL database (%s) not found, removing schema (%s) from state", database, schemaName)
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 	defer deferredRollback(txn)

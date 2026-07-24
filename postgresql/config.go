@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -11,7 +12,7 @@ import (
 	"unicode"
 
 	"github.com/blang/semver"
-	_ "github.com/lib/pq" // PostgreSQL db
+	"github.com/lib/pq"
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
 	"gocloud.dev/postgres"
@@ -305,6 +306,14 @@ func (c *Client) Connect() (*DBConnection, error) {
 			err = db.Ping()
 		}
 		if err != nil {
+			// Server-side errors (e.g. a dropped database, SQLSTATE 3D000) never
+			// contain the password, so wrap them to preserve the *pq.Error type
+			// for callers such as isDatabaseDoesNotExistError. Other errors (dial
+			// failures, DSN parsing) may echo the password, so keep redacting.
+			var pqErr *pq.Error
+			if errors.As(err, &pqErr) {
+				return nil, fmt.Errorf("error connecting to PostgreSQL server %s (scheme: %s): %w", c.config.Host, c.config.Scheme, err)
+			}
 			errString := strings.Replace(err.Error(), c.config.Password, "XXXX", 2)
 			return nil, fmt.Errorf("error connecting to PostgreSQL server %s (scheme: %s): %s", c.config.Host, c.config.Scheme, errString)
 		}

@@ -2,6 +2,7 @@ package postgresql
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -10,6 +11,22 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/lib/pq"
 )
+
+// isDatabaseDoesNotExistError reports whether err was caused by connecting to or
+// querying a PostgreSQL database that no longer exists (SQLSTATE 3D000,
+// invalid_catalog_name). Read functions use it to prune resources whose database
+// was dropped out-of-band instead of failing the whole refresh.
+//
+// It only matches when the driver exposes a *pq.Error; for any other error (or a
+// driver that does not, such as some gocloud schemes) it returns false, so the
+// caller keeps its existing error handling.
+func isDatabaseDoesNotExistError(err error) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		return pqErr.Code.Name() == "invalid_catalog_name"
+	}
+	return false
+}
 
 func PGResourceFunc(fn func(*DBConnection, *schema.ResourceData) error) func(*schema.ResourceData, any) error {
 	return func(d *schema.ResourceData, meta any) error {

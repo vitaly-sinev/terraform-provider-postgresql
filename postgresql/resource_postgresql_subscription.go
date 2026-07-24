@@ -115,6 +115,11 @@ func resourcePostgreSQLSubscriptionReadImpl(db *DBConnection, d *schema.Resource
 
 	txn, err := startTransaction(db.client, databaseName)
 	if err != nil {
+		if isDatabaseDoesNotExistError(err) {
+			log.Printf("[WARN] PostgreSQL database (%s) not found, removing subscription (%s) from state", databaseName, subName)
+			d.SetId("")
+			return nil
+		}
 		return fmt.Errorf("could not start transaction: %w", err)
 	}
 	defer deferredRollback(txn)

@@ -137,6 +137,11 @@ func resourcePostgreSQLExtensionReadImpl(db *DBConnection, d *schema.ResourceDat
 
 	txn, err := startTransaction(db.client, database)
 	if err != nil {
+		if isDatabaseDoesNotExistError(err) {
+			log.Printf("[WARN] PostgreSQL database (%s) not found, removing extension (%s) from state", database, extName)
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 	defer deferredRollback(txn)

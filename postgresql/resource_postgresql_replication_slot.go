@@ -76,6 +76,11 @@ func resourcePostgreSQLReplicationSlotReadImpl(db *DBConnection, d *schema.Resou
 	// NB: we use initConnection instead of startTransaction so that replication slots can be managed on replica servers too, for cascading replication
 	dbc, err := initConnection(db.client, database)
 	if err != nil {
+		if isDatabaseDoesNotExistError(err) {
+			log.Printf("[WARN] PostgreSQL database (%s) not found, removing replication slot (%s) from state", database, replicationSlotName)
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 
@@ -87,6 +92,10 @@ func resourcePostgreSQLReplicationSlotReadImpl(db *DBConnection, d *schema.Resou
 	switch {
 	case err == sql.ErrNoRows:
 		log.Printf("[WARN] PostgreSQL ReplicationSlot (%s) not found for database %s", replicationSlotName, database)
+		d.SetId("")
+		return nil
+	case isDatabaseDoesNotExistError(err):
+		log.Printf("[WARN] PostgreSQL database %s not found, removing replication slot %s from state", database, replicationSlotName)
 		d.SetId("")
 		return nil
 	case err != nil:

@@ -276,6 +276,11 @@ func resourcePostgreSQLPublicationReadImpl(db *DBConnection, d *schema.ResourceD
 
 	txn, err := startTransaction(db.client, database)
 	if err != nil {
+		if isDatabaseDoesNotExistError(err) {
+			log.Printf("[WARN] PostgreSQL database (%s) not found, removing publication (%s) from state", database, PublicationName)
+			d.SetId("")
+			return nil
+		}
 		return fmt.Errorf("could not start transaction: %w", err)
 	}
 	defer deferredRollback(txn)

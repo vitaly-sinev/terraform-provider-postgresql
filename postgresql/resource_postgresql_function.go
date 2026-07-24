@@ -231,6 +231,11 @@ func resourcePostgreSQLFunctionReadImpl(db *DBConnection, d *schema.ResourceData
 
 	txn, err := startTransaction(db.client, databaseName)
 	if err != nil {
+		if isDatabaseDoesNotExistError(err) {
+			log.Printf("[WARN] PostgreSQL database (%s) not found, removing function (%s) from state", databaseName, functionId)
+			d.SetId("")
+			return nil
+		}
 		return err
 	}
 	defer deferredRollback(txn)
