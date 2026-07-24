@@ -10,6 +10,8 @@ import (
 )
 
 func TestAccPostgresqlPhysicalReplicationSlot_Basic(t *testing.T) {
+	skipIfNotAcc(t)
+
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
@@ -38,6 +40,8 @@ func TestAccPostgresqlPhysicalReplicationSlot_Basic(t *testing.T) {
 // the slot is planned for recreation (non-empty plan). This guards the Read-based
 // drift detection that replaced the removed Exists callback.
 func TestAccPostgresqlPhysicalReplicationSlot_Disappears(t *testing.T) {
+	skipIfNotAcc(t)
+
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
