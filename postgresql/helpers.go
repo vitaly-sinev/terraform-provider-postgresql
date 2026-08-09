@@ -23,7 +23,7 @@ import (
 func isDatabaseDoesNotExistError(err error) bool {
 	var pqErr *pq.Error
 	if errors.As(err, &pqErr) {
-		return pqErr.Code.Name() == "invalid_catalog_name"
+		return pqErr.Code == "3D000" // invalid_catalog_name
 	}
 	return false
 }

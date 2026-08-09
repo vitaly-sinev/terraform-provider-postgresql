@@ -281,7 +281,8 @@ func resourcePostgreSQLPublicationReadImpl(db *DBConnection, d *schema.ResourceD
 			d.SetId("")
 			return nil
 		}
-		return fmt.Errorf("could not start transaction: %w", err)
+		// startTransaction already provides context; avoid double-wrapping.
+		return err
 	}
 	defer deferredRollback(txn)
 
